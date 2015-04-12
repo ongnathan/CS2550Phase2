@@ -1,7 +1,6 @@
 package CPU;
 
 import java.io.FileNotFoundException;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
@@ -11,6 +10,7 @@ import AfterImage.AfterImage;
 import MainMemory.RowColumnStorage;
 import MemoryManager.MemoryManager;
 import Transaction.TransactionManager;
+import Transaction.TransactionManager.transaction;
 import data.AreaCode;
 import data.IDNumber;
 import data.Record;
@@ -120,24 +120,24 @@ public class CPU{
 				switch (scriptTransactionManager.getCommand())
 				{
 					case READ_ID:
-						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue());
+						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue(), scriptTransactionManager.getTransaction().getTransactionType());
 						result = (value != null);
 						break;
 					case READ_AREA_CODE:
 						AreaCode area_code =  (AreaCode) scriptTransactionManager.getValue();
-						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName());
+						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName());
+						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
 						result = (counter >= 0);
 						value = counter;
 						break;
 					case INSERT:
-						result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
+						result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue(),scriptTransactionManager.getTransaction().getTransactionType());
 						break;
 					case DELETE_TABLE:
-						result=memoryManager.deleteTable(scriptTransactionManager.getTableName());
+						result=memoryManager.deleteTable(scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
 						break;
 					case COMMIT:	// need to check commit function in MM
 						result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
