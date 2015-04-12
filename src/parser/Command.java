@@ -6,5 +6,5 @@ package parser;
  */
 public enum Command
 {
-	READ_ID, READ_AREA_CODE, COUNT_AREA_CODE, INSERT, DELETE_TABLE;
+	READ_ID, READ_AREA_CODE, COUNT_AREA_CODE, INSERT, DELETE_TABLE, COMMIT, ABORT, BEGIN;
 }//end enum Command

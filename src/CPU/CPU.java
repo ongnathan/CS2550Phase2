@@ -143,7 +143,7 @@ public class CPU{
 						result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
 						break;
 					case ABORT:
-						result=scriptTransactionManager.abort();
+						scriptTransactionManager.Abort();
 					default:
 						throw new UnsupportedOperationException("Command not supported");
 				}
@@ -199,8 +199,8 @@ public class CPU{
 						}
 					case ABORT:			// need to check this
 						if(result)
-						{				
-							builder.append("Abort: " + scriptTransactionManager.abort() + "\n");
+						{
+							builder.append("Abort: " + "\n");
 							AfterImage.LogInsert(scriptTransactionManager);
 						}
 						

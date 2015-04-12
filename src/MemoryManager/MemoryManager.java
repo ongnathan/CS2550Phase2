@@ -7,6 +7,7 @@ import parser.Command;
 import disk.*;
 import data.*;
 import MainMemory.*;
+import Transaction.TransactionManager.transaction;
 import disk.DiskOperation;
 
 public class MemoryManager {
@@ -451,5 +452,10 @@ public class MemoryManager {
 	public Record[][] getCurrentPreImage()
 	{
 		return this.memory.getPreImage();
+	}
+
+	public boolean commitToTransaction(ArrayList<transaction> opBuffer) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

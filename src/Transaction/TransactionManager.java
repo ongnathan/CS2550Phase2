@@ -168,12 +168,13 @@ public class TransactionManager {
 		return temp;
 		
 	}
+	
 	public void Abort(){
 		TransactionType = false;
 		TID = -1;
 		OPBuffer.clear();
-		
 	}
+	
 	public String getFullString()
 	{
 		return this.fullString;
