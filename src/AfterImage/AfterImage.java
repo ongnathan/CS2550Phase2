@@ -1,19 +1,18 @@
 package AfterImage;
 
-import parser.Command;
-import parser.Parser;
-
+import Transaction.TransactionManager;
+ 
 public class AfterImage {
 
-	public static void LogInsert(Parser scriptParser) {
-		System.out.println("Instruction: " + scriptParser.getFullString());
-		System.out.println("["+ scriptParser.getFileName()+":" + scriptParser.getLineNumber()+",I,"+scriptParser.getTableName() + "," + scriptParser.getValue()+ "]");
+	public static void LogInsert(TransactionManager scriptTransactionManager) {
+		System.out.println("Instruction: " + scriptTransactionManager.getFullString());
+		System.out.println("["+ scriptTransactionManager.getFileName()+":" + scriptTransactionManager.getLineNumber()+",I,"+scriptTransactionManager.getTableName() + "," + scriptTransactionManager.getValue()+ "]");
 		
 	}
 
-	public static void LogDelete(Parser scriptParser) {
-		System.out.println("Instruction: " + scriptParser.getFullString());
-		System.out.println("["+ scriptParser.getFileName()+":"+ scriptParser.getLineNumber()+",D,"+scriptParser.getTableName() + "]");
+	public static void LogDelete(TransactionManager scriptTransactionManager) {
+		System.out.println("Instruction: " + scriptTransactionManager.getFullString());
+		System.out.println("["+ scriptTransactionManager.getFileName()+":"+ scriptTransactionManager.getLineNumber()+",D,"+scriptTransactionManager.getTableName() + "]");
 		
 	}
 }

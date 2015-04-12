@@ -1,23 +1,25 @@
 package CPU;
 
 import java.io.FileNotFoundException;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 
+import parser.DatabaseParser;
+import AfterImage.AfterImage;
+import MainMemory.RowColumnStorage;
+import MemoryManager.MemoryManager;
+import Transaction.TransactionManager;
 import data.AreaCode;
 import data.IDNumber;
 import data.Record;
 import disk.Disk;
-//import parser.Command;
-import parser.DatabaseParser;
-import parser.Parser;
-import AfterImage.AfterImage;
-import MainMemory.RowColumnStorage;
-import MemoryManager.MemoryManager;
+//import parser.Parser;
+//import tansactionmanager.TransactionManager;
 
-public class CPU 
-{
+public class CPU{
+
 	public static void main(String[] args) throws IOException
 	{
 		//argument check
@@ -82,10 +84,11 @@ public class CPU
 		for(int i = 0; i < scriptFiles.length; i++)
 		{
 			System.out.println("Running Script " + scriptFiles[i]);
-			Parser scriptParser = null;
+		
+			TransactionManager scriptTransactionManager = null;
 			try
 			{
-				scriptParser = new Parser(scriptFiles[i]);
+				scriptTransactionManager = new TransactionManager(scriptFiles[i]);
 			}
 			catch(FileNotFoundException e)
 			{
@@ -101,42 +104,46 @@ public class CPU
 			{
 				try
 				{
-					scriptParser.loadNextLine();
+					scriptTransactionManager.loadNextLine();
 //					lineCounter++;
-					builder.append(scriptParser.getFullString() + "\n");
+					builder.append(scriptTransactionManager.getFullString() + "\n");
 				}
 				catch(IOException e)
 				{
 					System.err.println(e.getMessage());
 					builder.append(e.getMessage() + "\n");
 				}
-			} while(scriptParser.isError() && !scriptParser.streamIsClosed());
+			} while(scriptTransactionManager.isError() && !scriptTransactionManager.streamIsClosed());
 			
-			while (!scriptParser.streamIsClosed())
+			while (!scriptTransactionManager.streamIsClosed())
 			{
-				switch (scriptParser.getCommand())
+				switch (scriptTransactionManager.getCommand())
 				{
 					case READ_ID:
-						value = memoryManager.readRecord(scriptParser.getTableName(), (IDNumber)scriptParser.getValue());
+						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue());
 						result = (value != null);
 						break;
 					case READ_AREA_CODE:
-						AreaCode area_code =  (AreaCode) scriptParser.getValue();
-						value = memoryManager.readAreaCode(area_code,scriptParser.getTableName());
+						AreaCode area_code =  (AreaCode) scriptTransactionManager.getValue();
+						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName());
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						int counter = memoryManager.countAreaCode((AreaCode) scriptParser.getValue(),scriptParser.getTableName());
+						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName());
 						result = (counter >= 0);
 						value = counter;
 						break;
 					case INSERT:
-						result=memoryManager.insertToMemory(scriptParser.getTableName(), (Record)scriptParser.getValue());
-						
+						result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
 						break;
 					case DELETE_TABLE:
-						result=memoryManager.deleteTable(scriptParser.getTableName());
+						result=memoryManager.deleteTable(scriptTransactionManager.getTableName());
 						break;
+					case COMMIT:	// need to check commit function in MM
+						result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
+						break;
+					case ABORT:
+						result=scriptTransactionManager.abort();
 					default:
 						throw new UnsupportedOperationException("Command not supported");
 				}
@@ -145,10 +152,10 @@ public class CPU
 				
 				if(!result)
 				{
-					builder.append("Failed: " + scriptParser.getFullString() + "\n");
+					builder.append("Failed: " + scriptTransactionManager.getFullString() + "\n");
 				}
 				
-				switch(scriptParser.getCommand())
+				switch(scriptTransactionManager.getCommand())
 				{
 					case READ_ID:
 						if(result)
@@ -174,16 +181,27 @@ public class CPU
 					case INSERT:
 						if(result)
 						{
-							builder.append("Inserted: " + scriptParser.getValue().toString().substring(1, scriptParser.getValue().toString().length()-1) + "\n");
-							AfterImage.LogInsert(scriptParser);
+							builder.append("Inserted: " + scriptTransactionManager.getValue().toString().substring(1, scriptTransactionManager.getValue().toString().length()-1) + "\n");
+							AfterImage.LogInsert(scriptTransactionManager);
 						}
 						
 						break;
 					case DELETE_TABLE:
 						if(result)
 						{
-							builder.append("Deleted: " + scriptParser.getTableName() + "\n");
-							AfterImage.LogDelete(scriptParser);
+							builder.append("Deleted: " + scriptTransactionManager.getTableName() + "\n");
+							AfterImage.LogDelete(scriptTransactionManager);
+						}
+					case COMMIT:		// need to check this
+						if(result)
+						{
+							builder.append("Commit: " + scriptTransactionManager.getOPBuffer() + "\n" );
+						}
+					case ABORT:			// need to check this
+						if(result)
+						{				
+							builder.append("Abort: " + scriptTransactionManager.abort() + "\n");
+							AfterImage.LogInsert(scriptTransactionManager);
 						}
 						
 						break;
@@ -195,16 +213,16 @@ public class CPU
 				{
 					try
 					{
-						scriptParser.loadNextLine();
+						scriptTransactionManager.loadNextLine();
 //						lineCounter++;
-						builder.append(scriptParser.getFullString() + "\n");
+						builder.append(scriptTransactionManager.getFullString() + "\n");
 					}
 					catch(IOException e)
 					{
 						System.err.println(e.getMessage());
 						builder.append(e.getMessage() + "\n");
 					}
-				} while(scriptParser.isError() && !scriptParser.streamIsClosed());
+				} while(scriptTransactionManager.isError() && !scriptTransactionManager.streamIsClosed());
 			}
 			System.out.println("Execution on " + scriptFiles[i] + " is finished!");
 			System.out.println("Dump:");
@@ -216,4 +234,5 @@ public class CPU
 			writer.close();
 		}
 	}
+	
 }
