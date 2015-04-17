@@ -13,6 +13,7 @@ import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
 import parser.Command;
 import data.AreaCode;
 import data.IDNumber;
+import data.PhoneNumber;
 import data.Record;
 
 public class TransactionManager {
@@ -31,6 +32,8 @@ public class TransactionManager {
 	private boolean TransactionType;
 	private int TID; 
 	private ArrayList<transaction> OPBuffer;
+	private ArrayList<ArrayList<Record>> tempData;
+	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	
 	/**
 	 * The constructor.
@@ -59,6 +62,8 @@ public class TransactionManager {
 		this.TransactionType = false;
 		this.TID = -1;
 		this.OPBuffer = new ArrayList<transaction>();
+		this.tempData = new ArrayList<ArrayList<Record>>();
+		this.tempTableIndex = new ArrayList<String>();
 	}
 	
 	/**
@@ -168,7 +173,57 @@ public class TransactionManager {
 		return temp;
 		
 	}
+	public void writeToTempData(Record r,String tableName){
+		for(int i = 0; i < tempData.size(); i ++){
+			if(tempTableIndex.get(i).equals(tableName)){
+				tempData.get(i).add(r);
+				return;
+			}
+		}
+		tempTableIndex.add(tableName);
+		ArrayList<Record> tempArray = new ArrayList<Record>();
+		tempArray.add(r);
+		tempData.add(tempArray);
+	}
 	
+	public Record ReadIdFromTempData(long id, String tableName){
+		for(int i = 0; i < tempData.size(); i ++){
+			if(tempTableIndex.get(i).equals(tableName)){
+				for(int j= 0; j < tempData.get(i).size();j++){
+					if(tempData.get(i).get(j).id.value == id){
+						return tempData.get(i).get(j);
+					}
+				}
+			}
+		}
+		return null;
+	}
+	public ArrayList<Record> ReadAreaFromTempData(String area, String tableName){
+		ArrayList<Record> tempReturnResult = new ArrayList<Record>();
+		for(int i = 0; i < tempData.size(); i ++){
+			if(tempTableIndex.get(i).equals(tableName)){
+				for(int j= 0; j < tempData.get(i).size();j++){
+					if(tempData.get(i).get(j).phoneNumber.areaCode.equals(area)){
+						tempReturnResult.add(tempData.get(i).get(j));
+					}
+				}
+			}
+		}
+		return tempReturnResult;
+	}
+	public int CountFromTempData(PhoneNumber pNumber, String tableName){
+		int tempReturnResult = 0;
+		for(int i = 0; i < tempData.size(); i ++){
+			if(tempTableIndex.get(i).equals(tableName)){
+				for(int j= 0; j < tempData.get(i).size();j++){
+					if(tempData.get(i).get(j).phoneNumber.areaCode.equals(pNumber.areaCode)){
+						tempReturnResult++;
+					}
+				}
+			}
+		}
+		return tempReturnResult;
+	}
 	public void Abort(){
 		TransactionType = false;
 		TID = -1;
