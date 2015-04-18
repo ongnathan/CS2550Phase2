@@ -3,6 +3,7 @@ package CPU;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -135,9 +136,8 @@ public class CPU{
 						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName());
 						if(scriptTransactionManager.getTransaction().getTransactionType()){
 							ArrayList<Record> bufferRecordPhoneNumber = scriptTransactionManager.ReadAreaFromTempData( area_code.areaCode, scriptTransactionManager.getTableName());
-							//TODO: Convert to object value, type issue 
-							//bufferRecordPhoneNumber.addAll( new ArrayList<Record>(Arrays.asList((Record)value)));
-							value = bufferRecordPhoneNumber.toArray();
+							Record[] temp = bufferRecordPhoneNumber.toArray(new Record[bufferRecordPhoneNumber.size()]);
+							value = join((Record[])value,temp);
 						}
 						result = (value != null);
 						break;
@@ -264,5 +264,21 @@ public class CPU{
 			writer.close();
 		}
 	}
-	
+	private static Record[] join(Record[] ... parms) {
+	    // calculate size of target array
+	    int size = 0;
+	    for (Record[] array : parms) {
+	      size += array.length;
+	    }
+
+	    Record[] result = new Record[size];
+
+	    int j = 0;
+	    for (Record[] array : parms) {
+	      for (Record s : array) {
+	        result[j++] = s;
+	      }
+	    }
+	    return result;
+	  }
 }

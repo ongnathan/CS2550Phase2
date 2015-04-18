@@ -468,7 +468,8 @@ public class MemoryManager {
 					break;
 			}
 		}
-		//memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
-		return false;
+		return true;
 	}
 }
+
+

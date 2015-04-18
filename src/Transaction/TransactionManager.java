@@ -164,9 +164,12 @@ public class TransactionManager {
 		}//end else
 		this.fullString = line;
 	}//end method()
+	
 	public ArrayList<transaction> getOPBuffer(){
 		ArrayList<transaction> temp = (ArrayList<transaction>) OPBuffer.clone();
 		OPBuffer.clear();
+		tempData.clear();
+		tempTableIndex.clear();
 		TID = -1;
 		return temp;
 		
@@ -243,7 +246,8 @@ public class TransactionManager {
 		TransactionType = false;
 		TID = -1;
 		OPBuffer.clear();
-		//TODO: clear insert buffer and deletetalbe buffer
+		tempData.clear();
+		tempTableIndex.clear();
 	}
 	
 	public String getFullString()
