@@ -3,14 +3,16 @@ package CPU;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Objects;
 
 import parser.DatabaseParser;
 import AfterImage.AfterImage;
 import MainMemory.RowColumnStorage;
 import MemoryManager.MemoryManager;
 import Transaction.TransactionManager;
-import Transaction.TransactionManager.transaction;
 import data.AreaCode;
 import data.IDNumber;
 import data.Record;
@@ -120,30 +122,58 @@ public class CPU{
 				switch (scriptTransactionManager.getCommand())
 				{
 					case READ_ID:
-						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue(), scriptTransactionManager.getTransaction().getTransactionType());
-						result = (value != null);
+						result = false;
+						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue());
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							Record bufferRecord = scriptTransactionManager.ReadIdFromTempData( ((IDNumber)scriptTransactionManager.getValue()).value, scriptTransactionManager.getTableName());
+							result =  (bufferRecord != null );
+						}
+						result = (value != null) || result;
 						break;
 					case READ_AREA_CODE:
 						AreaCode area_code =  (AreaCode) scriptTransactionManager.getValue();
-						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
+						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName());
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							ArrayList<Record> bufferRecordPhoneNumber = scriptTransactionManager.ReadAreaFromTempData( area_code.areaCode, scriptTransactionManager.getTableName());
+							//TODO: Convert to object value, type issue 
+							//bufferRecordPhoneNumber.addAll( new ArrayList<Record>(Arrays.asList((Record)value)));
+							value = bufferRecordPhoneNumber.toArray();
+						}
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
+						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName());
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							counter += scriptTransactionManager.CountFromTempData((AreaCode) scriptTransactionManager.getValue(), scriptTransactionManager.getTableName());
+						}
 						result = (counter >= 0);
 						value = counter;
 						break;
 					case INSERT:
-						result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue(),scriptTransactionManager.getTransaction().getTransactionType());
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							result = scriptTransactionManager.writeToTempData(scriptTransactionManager.getTransaction().getTinRecordFormat(),scriptTransactionManager.getTransaction().getTableName());
+						}
+						else{
+							result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
+						}
 						break;
 					case DELETE_TABLE:
-						result=memoryManager.deleteTable(scriptTransactionManager.getTableName(),scriptTransactionManager.getTransaction().getTransactionType());
+						//TODO: delete buffer needed, since we need to store delete state
+						if(!scriptTransactionManager.getTransaction().getTransactionType()){
+							result=memoryManager.deleteTable(scriptTransactionManager.getTableName());
+						}else{
+							//put into op buffer
+						}
 						break;
 					case COMMIT:	// need to check commit function in MM
-						result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
+						}
 						break;
 					case ABORT:
-						scriptTransactionManager.Abort();
+						if(scriptTransactionManager.getTransaction().getTransactionType()){
+							scriptTransactionManager.Abort();
+						}
 					default:
 						throw new UnsupportedOperationException("Command not supported");
 				}

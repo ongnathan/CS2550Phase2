@@ -49,7 +49,7 @@ public class MemoryManager {
 
 
 	//Insert new record to memory array(named 'memory_array') and RCSObject(named 'memory')
-	public boolean insertToMemory(String table_name, Record record, boolean transactionType)
+	public boolean insertToMemory(String table_name, Record record)
 	{
 		if(memory.retrieve(record.id, table_name) != null)
 		{
@@ -60,7 +60,7 @@ public class MemoryManager {
 				return false;
 			}
 			//else find ID
-			this.bringInAttributePage(IDNumber.class.getName(), record, table_name, transactionType);
+			this.bringInAttributePage(IDNumber.class.getName(), record, table_name);
 		}
 		else
 		{
@@ -102,7 +102,7 @@ public class MemoryManager {
 						//add page to mem
 						if(!memory_array.availableSpace())
 						{
-							page_id = evictPage(transactionType);
+							page_id = evictPage();
 							memory_array.replace(page_id, page);//replace new file to memory_array
 						}
 						else
@@ -124,7 +124,7 @@ public class MemoryManager {
 					//if NOT the last page: keep bring it from disk until it reaches last page
 						if(!memory_array.availableSpace())
 						{
-							page_id = evictPage(transactionType);
+							page_id = evictPage();
 							memory_array.replace(page_id, page);
 							lru.insertNewPageToLRU(page_id, page.diskPageNum);
 							lastActionString.append("SWAP IN T-" + table_name + " P-" + page_id + " B-" + page.nextSlottedPagePointer.hashValue + "\n");
@@ -140,7 +140,7 @@ public class MemoryManager {
 					lastActionString.append("CREATE T-" + table_name + " P-" + page_id + " B-" + page.nextSlottedPagePointer.hashValue + "\n");
 					if(!memory_array.availableSpace())
 					{
-						page_id = evictPage(transactionType);
+						page_id = evictPage();
 						memory_array.replace(page_id, page);//replace new file to memory_array
 					}
 					else
@@ -186,7 +186,7 @@ public class MemoryManager {
 	}
 	
 	//This will bring up the attribute's page until it reaches last page of the disk.
-	private void bringInAttributePage(String attribute, Record record, String tableName, boolean transactionType)
+	private void bringInAttributePage(String attribute, Record record, String tableName)
 	{
 		Attribute value = null;
 		switch(attribute)
@@ -247,7 +247,7 @@ public class MemoryManager {
 			
 			if(!memory_array.availableSpace())
 			{
-				page_id = evictPage(transactionType);
+				page_id = evictPage();
 				memory_array.replace(page_id, page_disk);
 			}
 			else
@@ -299,14 +299,14 @@ public class MemoryManager {
 	}
 	
 	//Retrieve record from memory given id of the record
-	public Record readRecord(String table_name, IDNumber record_id, boolean transactionType)
+	public Record readRecord(String table_name, IDNumber record_id)
 	{
 		Record record = memory.retrieve(record_id, table_name); //If RCSObject has the Record ID, then it will return record object of the ID.
 		
 		//first check RCSOBject that any of record has such table_name AND record_id EXIST IN OUR DATABASE
 		if (record == null)
 		{
-			this.insertAllIDPages(table_name, record_id, transactionType);
+			this.insertAllIDPages(table_name, record_id);
 			System.out.println("The record not exist in the our Database. Abort for ID: " + record_id);
 			return null;
 		}
@@ -321,7 +321,7 @@ public class MemoryManager {
 		
 		for (String attribute : attributes)
 		{
-			this.bringInAttributePage(attribute, record, table_name, transactionType);
+			this.bringInAttributePage(attribute, record, table_name);
 		}
 		memory.alterCacheStatus(record, table_name, true);
 		//At this point, all three pages for all three attributes are in Main memory (memory_array)		
@@ -329,7 +329,7 @@ public class MemoryManager {
 	}
 	
 	//Using readRecord method, ReadAreaCode can easily retrieve record of that area code.
-	public Record[] readAreaCode(PhoneNumber phone_number, String table_name, boolean transactionType)
+	public Record[] readAreaCode(PhoneNumber phone_number, String table_name)
 	{
 		AreaCode area_code = new AreaCode(phone_number.areaCode);
 		//first check RCSOBject that any of record has such table_name AND record_id EXIST IN OUR DATABASE
@@ -341,7 +341,7 @@ public class MemoryManager {
 		Record[] records = memory.getRange(area_code,table_name); // this is complete list of records that has the area_code in our database
 		for(Record record:records)
 		{
-			readRecord(table_name,record.id, transactionType);
+			readRecord(table_name,record.id);
 		}
 		
 		return records;
@@ -349,13 +349,13 @@ public class MemoryManager {
 
 
 	//This will bring up the number of records by area code
-	public int countAreaCode(PhoneNumber phone_number, String table_name, boolean transactionType)
+	public int countAreaCode(PhoneNumber phone_number, String table_name)
 	{
-		return readAreaCode(phone_number,table_name, transactionType).length;
+		return readAreaCode(phone_number,table_name).length;
 	}
 	
 	//This deletes a table
-	public boolean deleteTable(String tableName, boolean transactionType)
+	public boolean deleteTable(String tableName)
 	{
 		if(!memory.deleteTable(tableName))
 		{
@@ -365,11 +365,7 @@ public class MemoryManager {
 
 		//To delete table, we need to 1)evict page from LRU, 2) delete table from disk.
 		lru.forceEvict(indexes);
-		if(transactionType){
-			//if it is a transaction delete table will be store in the buffer.
-		} else {
-			disk.deleteTable(tableName);
-		}
+		disk.deleteTable(tableName);
 		//delete from memory_array
 		memory_array.forceEvict(indexes);
 		lastActionString.append("Deleted: " + tableName + "\n");
@@ -392,7 +388,7 @@ public class MemoryManager {
 	
     //evictPage is triggered when there is no available space is in memory array
 	//returns the index of the evicted page
-	private int evictPage(boolean transactionType)
+	private int evictPage()
 	{
 		//If there's no space in memory then,
 		int page_ids[] = lru.pageToEvict();
@@ -401,20 +397,15 @@ public class MemoryManager {
 		ArrayList<DiskOperation> ops = lru.evict(page_ids[0]);
 
 		//reflect changes of record in the page evicted into the disk 
-		if(transactionType){
-			//if it is transaction  then store the command into buffer
-		} else {
-			
-			for(DiskOperation op : ops)
+		for(DiskOperation op : ops)
+		{
+			switch(op.command)
 			{
-				switch(op.command)
-				{
-					case INSERT:
-						disk.insertRecord(op.tableName, op.getRecord());
-						break;
-					default:
-						throw new UnsupportedOperationException("Command not supported.");
-				}
+				case INSERT:
+					disk.insertRecord(op.tableName, op.getRecord());
+					break;
+				default:
+					throw new UnsupportedOperationException("Command not supported.");
 			}
 		}
 		SlottedPage<? extends Attribute> pageToEvict = this.memory_array.getPage(page_ids[0]);
@@ -427,7 +418,7 @@ public class MemoryManager {
 	
 	//meant to be done when a failure is determined
 	@SuppressWarnings("unchecked")
-	private void insertAllIDPages(String tableName, IDNumber id, boolean transactionType)
+	private void insertAllIDPages(String tableName, IDNumber id)
 	{
 		SlottedPage <?extends Attribute>[] temp = disk.retrieve(tableName, id);
 		if(temp == null)
@@ -440,7 +431,7 @@ public class MemoryManager {
 				int pageID = -1;
 				if(!memory_array.availableSpace())
 				{
-					pageID = evictPage(transactionType);
+					pageID = evictPage();
 					memory_array.replace(pageID, idNumPage);//replace new file to memory_array
 				}
 				else
@@ -464,7 +455,20 @@ public class MemoryManager {
 	}
 
 	public boolean commitToTransaction(ArrayList<transaction> opBuffer) {
-		// TODO Auto-generated method stub
+		//if commit, then we write insert things into disk
+		for(transaction op : opBuffer)
+		{
+			switch(op.getCommand())
+			{
+				case INSERT:
+					insertToMemory(op.getTableName(), (Record)op.getValue());
+					break;
+				case DELETE_TABLE:
+					deleteTable(op.getTableName());
+					break;
+			}
+		}
+		//memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
 		return false;
 	}
 }

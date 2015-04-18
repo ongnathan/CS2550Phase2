@@ -135,8 +135,6 @@ public class TransactionManager {
 				}
 				
 			}
-			
-			
 		}
 		else
 		{
@@ -173,20 +171,23 @@ public class TransactionManager {
 		return temp;
 		
 	}
-	public void writeToTempData(Record r,String tableName){
+	public boolean writeToTempData(Record r,String tableName){
 		for(int i = 0; i < tempData.size(); i ++){
 			if(tempTableIndex.get(i).equals(tableName)){
 				tempData.get(i).add(r);
-				return;
+				return true;
 			}
 		}
 		tempTableIndex.add(tableName);
 		ArrayList<Record> tempArray = new ArrayList<Record>();
 		tempArray.add(r);
 		tempData.add(tempArray);
+		return true;
 	}
 	
 	public Record ReadIdFromTempData(long id, String tableName){
+		if(ifDeletetable(tableName)) 
+			return null;
 		for(int i = 0; i < tempData.size(); i ++){
 			if(tempTableIndex.get(i).equals(tableName)){
 				for(int j= 0; j < tempData.get(i).size();j++){
@@ -199,6 +200,8 @@ public class TransactionManager {
 		return null;
 	}
 	public ArrayList<Record> ReadAreaFromTempData(String area, String tableName){
+		if(ifDeletetable(tableName)) 
+			return null;
 		ArrayList<Record> tempReturnResult = new ArrayList<Record>();
 		for(int i = 0; i < tempData.size(); i ++){
 			if(tempTableIndex.get(i).equals(tableName)){
@@ -212,6 +215,8 @@ public class TransactionManager {
 		return tempReturnResult;
 	}
 	public int CountFromTempData(PhoneNumber pNumber, String tableName){
+		if(ifDeletetable(tableName)) 
+			return 0;
 		int tempReturnResult = 0;
 		for(int i = 0; i < tempData.size(); i ++){
 			if(tempTableIndex.get(i).equals(tableName)){
@@ -224,10 +229,21 @@ public class TransactionManager {
 		}
 		return tempReturnResult;
 	}
+	
+	private boolean ifDeletetable(String tableName){
+		for(transaction op : OPBuffer){
+			if( op.getCommand()==Command.DELETE_TABLE&& op.getTableName()==tableName){
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public void Abort(){
 		TransactionType = false;
 		TID = -1;
 		OPBuffer.clear();
+		//TODO: clear insert buffer and deletetalbe buffer
 	}
 	
 	public String getFullString()
@@ -313,6 +329,10 @@ public class TransactionManager {
 			this.TransactionType = TransactionType;
 			this.TID = TID;
 		}
+		public Record getTinRecordFormat(){
+			return new Record((String)this.value);
+		}
+		
 		public String getFullString()
 		{
 			return this.fullString;
