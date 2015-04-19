@@ -3,7 +3,6 @@ package CPU;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,6 +24,11 @@ public class CPU{
 
 	public static void main(String[] args) throws IOException
 	{
+		int executingSequencyType = 0;
+		int nextScriptIndex = 0;
+		int numberOfScript = 0;
+		int[] fileEndCheck;
+		int endFileCount = 0;
 		//argument check
 		if(args.length < 4 || !Arrays.asList(args).contains("X"))
 		{
@@ -84,21 +88,29 @@ public class CPU{
 		}
 		
 		//run all scripts
+		TransactionManager[] scriptTransactionManager = new TransactionManager[scriptFiles.length];
 		for(int i = 0; i < scriptFiles.length; i++)
 		{
-			System.out.println("Running Script " + scriptFiles[i]);
-		
-			TransactionManager scriptTransactionManager = null;
+			//System.out.println("Running Script " + scriptFiles[i]);
+			numberOfScript++;
 			try
 			{
-				scriptTransactionManager = new TransactionManager(scriptFiles[i]);
+				scriptTransactionManager[i] = new TransactionManager(scriptFiles[i]);
 			}
 			catch(FileNotFoundException e)
 			{
 				System.out.println("File " + scriptFiles[i] + " not found, skipping file.");
 				continue;
 			}
-			
+		}
+		fileEndCheck = new int[numberOfScript];
+		while(true){
+		if(executingSequencyType == 0){//running one by one
+			nextScriptIndex++;
+			nextScriptIndex = nextScriptIndex%numberOfScript;
+		} else {
+			nextScriptIndex = ((int)Math.random()*10000)%numberOfScript;
+		}
 			boolean result = false;
 			Object value = "  ";
 			StringBuilder builder = new StringBuilder();
@@ -107,72 +119,73 @@ public class CPU{
 			{
 				try
 				{
-					scriptTransactionManager.loadNextLine();
+					scriptTransactionManager[nextScriptIndex].loadNextLine();
 //					lineCounter++;
-					builder.append(scriptTransactionManager.getFullString() + "\n");
+					builder.append(scriptTransactionManager[nextScriptIndex].getFullString() + "\n");
 				}
 				catch(IOException e)
 				{
 					System.err.println(e.getMessage());
 					builder.append(e.getMessage() + "\n");
 				}
-			} while(scriptTransactionManager.isError() && !scriptTransactionManager.streamIsClosed());
+			} while(scriptTransactionManager[nextScriptIndex].isError() && !scriptTransactionManager[nextScriptIndex].streamIsClosed());
 			
-			while (!scriptTransactionManager.streamIsClosed())
+			if (!scriptTransactionManager[nextScriptIndex].streamIsClosed() && fileEndCheck[nextScriptIndex] != 1)
 			{
-				switch (scriptTransactionManager.getCommand())
+				switch (scriptTransactionManager[nextScriptIndex].getCommand())
 				{
 					case READ_ID:
 						result = false;
-						value = memoryManager.readRecord(scriptTransactionManager.getTableName(), (IDNumber)scriptTransactionManager.getValue());
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							Record bufferRecord = scriptTransactionManager.ReadIdFromTempData( ((IDNumber)scriptTransactionManager.getValue()).value, scriptTransactionManager.getTableName());
+						value = memoryManager.readRecord(scriptTransactionManager[nextScriptIndex].getTableName(), (IDNumber)scriptTransactionManager[nextScriptIndex].getValue());
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							Record bufferRecord = scriptTransactionManager[nextScriptIndex].ReadIdFromTempData( ((IDNumber)scriptTransactionManager[nextScriptIndex].getValue()).value, scriptTransactionManager[nextScriptIndex].getTableName());
 							result =  (bufferRecord != null );
 						}
 						result = (value != null) || result;
 						break;
 					case READ_AREA_CODE:
-						AreaCode area_code =  (AreaCode) scriptTransactionManager.getValue();
-						value = memoryManager.readAreaCode(area_code,scriptTransactionManager.getTableName());
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							ArrayList<Record> bufferRecordPhoneNumber = scriptTransactionManager.ReadAreaFromTempData( area_code.areaCode, scriptTransactionManager.getTableName());
-							Record[] temp = bufferRecordPhoneNumber.toArray(new Record[bufferRecordPhoneNumber.size()]);
-							value = join((Record[])value,temp);
+						AreaCode area_code =  (AreaCode) scriptTransactionManager[nextScriptIndex].getValue();
+						value = memoryManager.readAreaCode(area_code,scriptTransactionManager[nextScriptIndex].getTableName());
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							ArrayList<Record> bufferRecordPhoneNumber = scriptTransactionManager[nextScriptIndex].ReadAreaFromTempData( area_code.areaCode, scriptTransactionManager[nextScriptIndex].getTableName());
+							//TODO: Convert to object value, type issue 
+							//bufferRecordPhoneNumber.addAll( new ArrayList<Record>(Arrays.asList((Record)value)));
+							value = bufferRecordPhoneNumber.toArray();
 						}
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager.getValue(),scriptTransactionManager.getTableName());
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							counter += scriptTransactionManager.CountFromTempData((AreaCode) scriptTransactionManager.getValue(), scriptTransactionManager.getTableName());
+						int counter = memoryManager.countAreaCode((AreaCode) scriptTransactionManager[nextScriptIndex].getValue(),scriptTransactionManager[nextScriptIndex].getTableName());
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							counter += scriptTransactionManager[nextScriptIndex].CountFromTempData((AreaCode) scriptTransactionManager[nextScriptIndex].getValue(), scriptTransactionManager[nextScriptIndex].getTableName());
 						}
 						result = (counter >= 0);
 						value = counter;
 						break;
 					case INSERT:
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							result = scriptTransactionManager.writeToTempData(scriptTransactionManager.getTransaction().getTinRecordFormat(),scriptTransactionManager.getTransaction().getTableName());
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							result = scriptTransactionManager[nextScriptIndex].writeToTempData(scriptTransactionManager[nextScriptIndex].getTransaction().getTinRecordFormat(),scriptTransactionManager[nextScriptIndex].getTransaction().getTableName());
 						}
 						else{
-							result=memoryManager.insertToMemory(scriptTransactionManager.getTableName(), (Record)scriptTransactionManager.getValue());
+							result=memoryManager.insertToMemory(scriptTransactionManager[nextScriptIndex].getTableName(), (Record)scriptTransactionManager[nextScriptIndex].getValue());
 						}
 						break;
 					case DELETE_TABLE:
 						//TODO: delete buffer needed, since we need to store delete state
-						if(!scriptTransactionManager.getTransaction().getTransactionType()){
-							result=memoryManager.deleteTable(scriptTransactionManager.getTableName());
+						if(!scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							result=memoryManager.deleteTable(scriptTransactionManager[nextScriptIndex].getTableName());
 						}else{
 							//put into op buffer
 						}
 						break;
 					case COMMIT:	// need to check commit function in MM
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							result=memoryManager.commitToTransaction(scriptTransactionManager.getOPBuffer());
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							result=memoryManager.commitToTransaction(scriptTransactionManager[nextScriptIndex].getOPBuffer());
 						}
 						break;
 					case ABORT:
-						if(scriptTransactionManager.getTransaction().getTransactionType()){
-							scriptTransactionManager.Abort();
+						if(scriptTransactionManager[nextScriptIndex].getTransaction().getTransactionType()){
+							scriptTransactionManager[nextScriptIndex].Abort();
 						}
 					default:
 						throw new UnsupportedOperationException("Command not supported");
@@ -182,10 +195,10 @@ public class CPU{
 				
 				if(!result)
 				{
-					builder.append("Failed: " + scriptTransactionManager.getFullString() + "\n");
+					builder.append("Failed: " + scriptTransactionManager[nextScriptIndex].getFullString() + "\n");
 				}
 				
-				switch(scriptTransactionManager.getCommand())
+				switch(scriptTransactionManager[nextScriptIndex].getCommand())
 				{
 					case READ_ID:
 						if(result)
@@ -211,27 +224,27 @@ public class CPU{
 					case INSERT:
 						if(result)
 						{
-							builder.append("Inserted: " + scriptTransactionManager.getValue().toString().substring(1, scriptTransactionManager.getValue().toString().length()-1) + "\n");
-							AfterImage.LogInsert(scriptTransactionManager);
+							builder.append("Inserted: " + scriptTransactionManager[nextScriptIndex].getValue().toString().substring(1, scriptTransactionManager[nextScriptIndex].getValue().toString().length()-1) + "\n");
+							AfterImage.LogInsert(scriptTransactionManager[nextScriptIndex]);
 						}
 						
 						break;
 					case DELETE_TABLE:
 						if(result)
 						{
-							builder.append("Deleted: " + scriptTransactionManager.getTableName() + "\n");
-							AfterImage.LogDelete(scriptTransactionManager);
+							builder.append("Deleted: " + scriptTransactionManager[nextScriptIndex].getTableName() + "\n");
+							AfterImage.LogDelete(scriptTransactionManager[nextScriptIndex]);
 						}
 					case COMMIT:		// need to check this
 						if(result)
 						{
-							builder.append("Commit: " + scriptTransactionManager.getOPBuffer() + "\n" );
+							builder.append("Commit: " + scriptTransactionManager[nextScriptIndex].getOPBuffer() + "\n" );
 						}
 					case ABORT:			// need to check this
 						if(result)
 						{
 							builder.append("Abort: " + "\n");
-							AfterImage.LogInsert(scriptTransactionManager);
+							AfterImage.LogInsert(scriptTransactionManager[nextScriptIndex]);
 						}
 						
 						break;
@@ -243,42 +256,32 @@ public class CPU{
 				{
 					try
 					{
-						scriptTransactionManager.loadNextLine();
+						scriptTransactionManager[nextScriptIndex].loadNextLine();
 //						lineCounter++;
-						builder.append(scriptTransactionManager.getFullString() + "\n");
+						builder.append(scriptTransactionManager[nextScriptIndex].getFullString() + "\n");
 					}
 					catch(IOException e)
 					{
 						System.err.println(e.getMessage());
 						builder.append(e.getMessage() + "\n");
 					}
-				} while(scriptTransactionManager.isError() && !scriptTransactionManager.streamIsClosed());
+				} while(scriptTransactionManager[nextScriptIndex].isError() && !scriptTransactionManager[nextScriptIndex].streamIsClosed());
+			} else {
+				fileEndCheck[nextScriptIndex] = 1;
+				endFileCount++;
+				System.out.println("Execution on " + scriptFiles[nextScriptIndex] + " is finished!");
+				System.out.println("Dump:");
+				System.out.println(builder.toString());
+				
+				FileWriter writer = new FileWriter(scriptFiles[nextScriptIndex].substring(0, scriptFiles[nextScriptIndex].length() - 4) + ".log");
+				writer.append(builder.toString());
+				writer.flush();
+				writer.close();
+				if(endFileCount == numberOfScript){
+					System.exit(0);
+				}
 			}
-			System.out.println("Execution on " + scriptFiles[i] + " is finished!");
-			System.out.println("Dump:");
-			System.out.println(builder.toString());
-			
-			FileWriter writer = new FileWriter(scriptFiles[i].substring(0, scriptFiles[i].length() - 4) + ".log");
-			writer.append(builder.toString());
-			writer.flush();
-			writer.close();
 		}
 	}
-	private static Record[] join(Record[] ... parms) {
-	    // calculate size of target array
-	    int size = 0;
-	    for (Record[] array : parms) {
-	      size += array.length;
-	    }
-
-	    Record[] result = new Record[size];
-
-	    int j = 0;
-	    for (Record[] array : parms) {
-	      for (Record s : array) {
-	        result[j++] = s;
-	      }
-	    }
-	    return result;
-	  }
+	
 }
