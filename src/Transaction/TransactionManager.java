@@ -250,6 +250,14 @@ public class TransactionManager {
 		tempTableIndex.clear();
 	}
 	
+	public void DeadLockAbort() throws IOException{
+		loadNextLine();
+		while(this.getCommand()!=Command.ABORT || this.getCommand()!=Command.COMMIT) loadNextLine();
+		Abort();
+		loadNextLine();
+	}
+	
+	
 	public String getFullString()
 	{
 		return this.fullString;
