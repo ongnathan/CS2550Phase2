@@ -11,7 +11,7 @@ import parser.DatabaseParser;
 import MainMemory.RowColumnStorage;
 import MemoryManager.MemoryManager;
 import Transaction.TransactionManager;
-import Transaction.TransactionManager.Transaction;
+import Transaction.TransactionManager.transaction;
 import data.AreaCode;
 import data.IDNumber;
 import data.Record;
@@ -134,7 +134,7 @@ public class CPU
 			
 			if (!chosenTM.streamIsClosed() && fileEndCheck[nextScriptIndex] != 1)
 			{
-				Transaction t = chosenTM.getTransaction();
+				transaction t = chosenTM.getTransaction();
 				switch (chosenTM.getCommand())
 				{
 					case READ_ID:
@@ -222,7 +222,7 @@ public class CPU
 					}
 					else if(chosenTM.getCommand() == Command.COMMIT)
 					{
-						for(Transaction transaction : chosenTM.getOPBuffer())
+						for(transaction transaction : chosenTM.getOPBuffer())
 						{
 							afterImageLog += afterImageLogging(transaction);
 						}
