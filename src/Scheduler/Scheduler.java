@@ -4,6 +4,9 @@ import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.Set;
 
+import data.AreaCode;
+import data.IDNumber;
+
 public class Scheduler {
 	ArrayList<Lock> LockTable = new ArrayList<Lock>();
 	long timestamp;
@@ -12,8 +15,9 @@ public class Scheduler {
 		timestamp = 0;
 	}
 	
-	public void addTupleLock(Type type, int TID, int ID, String TableName, String AreaCode){
-		Lock l = new Lock(type, 0, TID, ID, TableName, AreaCode);
+	//use
+	public void addTupleLock(Type type, int TID, IDNumber id, String TableName, AreaCode area_code){
+		Lock l = new Lock(type, 0, TID, id, TableName, area_code);
 		addLock(l);
 		return ;
 	}
@@ -24,7 +28,8 @@ public class Scheduler {
 		return ;
 	}
 	
-	public void reaseLock(int TID){
+	//use
+	public void releaseLock(int TID){
 		int i = LockTable.size();
 		while( i >= 0 ){
 			if( LockTable.get(i).TID == TID )
@@ -55,7 +60,7 @@ public class Scheduler {
 		return -1;
 	}
 
-	private Set<Integer> CycleDectact(){
+	private Set<Integer> cycleDectect(){
 		Graph WaitforGraph = new Graph();
 		int i = LockTable.size();
 		while( i >= 0 ){
@@ -65,14 +70,16 @@ public class Scheduler {
 		return WaitforGraph.checkCycle();
 	}
 	
-	public void DeadLockDetectFree(){
-		Set<Integer> DeadVertex = CycleDectact();
+	//use
+	public int DeadLockDetectFree(){
+		Set<Integer> DeadVertex = cycleDectect();
+		int DeadVertexTID = -1;
 		if(!DeadVertex.isEmpty()){
-			int DeadVertexTID = DeadVertex.iterator().next();
+			DeadVertexTID = DeadVertex.iterator().next();
 			//get dead TID, then clear the table entry whose wait for field is this TID
-			reaseLock(DeadVertexTID);
+			releaseLock(DeadVertexTID);
 		}
-		return ;
+		return DeadVertexTID;
 	}
 	
 	private boolean CompatTable(Type T1, Type T2){
@@ -88,18 +95,18 @@ public class Scheduler {
 		public Type Ttype;
 		public long TimeStamp;
 		public int TID;
-		public int ID;//Record ID
+		public IDNumber ID;//Record ID
 		public String TableName;
-		public String AreaCode;
+		public data.AreaCode AreaCode;
 		public int WaitforT;
 		
-		public Lock(Type type, int Stamp, int TID, int ID, String TableName, String AreaCode){
+		public Lock(Type type, int Stamp, int TID, IDNumber id2, String TableName, data.AreaCode area_code){
 			this.Ttype = type;
 			this.TimeStamp = Stamp;
 			this.TID = TID;
-			this.ID = ID;
+			this.ID = id2;
 			this.TableName = TableName;
-			this.AreaCode = AreaCode;
+			this.AreaCode = area_code;
 			this.WaitforT = -1;
 		}
 		
