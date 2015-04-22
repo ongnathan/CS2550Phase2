@@ -10,8 +10,10 @@ import parser.Command;
 import parser.DatabaseParser;
 import MainMemory.RowColumnStorage;
 import MemoryManager.MemoryManager;
+import Scheduler.Scheduler;
+import Scheduler.Type;
 import Transaction.TransactionManager;
-import Transaction.TransactionManager.transaction;
+import Transaction.TransactionManager.Transaction;
 import data.AreaCode;
 import data.IDNumber;
 import data.Record;
@@ -103,6 +105,8 @@ public class CPU
 			}
 		}
 		fileEndCheck = new int[numberOfScript];
+		
+		Scheduler scheduler = new Scheduler();
 		while(true)
 		{
 			//scheduler
@@ -134,57 +138,88 @@ public class CPU
 			
 			if (!chosenTM.streamIsClosed() && fileEndCheck[nextScriptIndex] != 1)
 			{
-				transaction t = chosenTM.getTransaction();
+				Transaction t = chosenTM.getTransaction();
 				switch (chosenTM.getCommand())
 				{
 					case READ_ID:
 						result = false;
 						value = memoryManager.readRecord(chosenTM.getTableName(), (IDNumber)chosenTM.getValue());
-						if(t.getTransactionType()){
-							Record bufferRecord = chosenTM.ReadIdFromTempData( ((IDNumber)chosenTM.getValue()).value, chosenTM.getTableName());
-							result =  (bufferRecord != null );
+						scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null);
+						if(t.getTransactionType() && value == null)
+						{
+							value = chosenTM.ReadIdFromTempData(((IDNumber)chosenTM.getValue()).value, chosenTM.getTableName());
 						}
-						result = (value != null) || result;
+						else if(!t.getTransactionType())
+						{
+							scheduler.releaseLock(t.getTID());
+						}
+						result = (value != null);
 						break;
 					case READ_AREA_CODE:
 						AreaCode area_code =  (AreaCode) chosenTM.getValue();
-						value = memoryManager.readAreaCode(area_code,chosenTM.getTableName());
-						if(t.getTransactionType()){
-							ArrayList<Record> bufferRecordPhoneNumber = chosenTM.ReadAreaFromTempData( area_code.areaCode, chosenTM.getTableName());
-							//TODO: Convert to object value, type issue 
-							//bufferRecordPhoneNumber.addAll( new ArrayList<Record>(Arrays.asList((Record)value)));
-							value = bufferRecordPhoneNumber.toArray();
+						Record[] tempRecordList = memoryManager.readAreaCode(area_code,chosenTM.getTableName());
+						scheduler.addTupleLock(Type.M, t.getTID(), null, chosenTM.getTableName(), area_code);
+						if(t.getTransactionType())
+						{
+							ArrayList<Record> transactionRecords = chosenTM.ReadAreaFromTempData( area_code.areaCode, chosenTM.getTableName());
+							if(tempRecordList != null)
+							{
+								transactionRecords.addAll(Arrays.asList(tempRecordList));
+							}
+							value = transactionRecords.isEmpty() ? null : transactionRecords.toArray(new Record[0]);
+						}
+						else
+						{
+							value = tempRecordList;
+							scheduler.releaseLock(t.getTID());
 						}
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						int counter = memoryManager.countAreaCode((AreaCode) chosenTM.getValue(),chosenTM.getTableName());
-						if(t.getTransactionType()){
-							counter += chosenTM.CountFromTempData((AreaCode) chosenTM.getValue(), chosenTM.getTableName());
+						AreaCode areaCode =  (AreaCode) chosenTM.getValue();
+						int counter = memoryManager.countAreaCode(areaCode,chosenTM.getTableName());
+						scheduler.addTupleLock(Type.G, t.getTID(), null, chosenTM.getTableName(), areaCode);
+						if(t.getTransactionType())
+						{
+							counter += chosenTM.CountFromTempData(areaCode, chosenTM.getTableName());
+						}
+						else
+						{
+							scheduler.releaseLock(t.getTID());
 						}
 						result = (counter >= 0);
 						value = counter;
 						break;
 					case INSERT:
-						if(t.getTransactionType()){
-							result = chosenTM.writeToTempData(chosenTM.getTransaction().getTinRecordFormat(),chosenTM.getTransaction().getTableName());
+						scheduler.addTupleLock(Type.I, t.getTID(), ((Record)t.getValue()).id, chosenTM.getTableName(), null);
+						if(t.getTransactionType())
+						{
+							result = chosenTM.writeToTempData(t.getTinRecordFormat(),chosenTM.getTransaction().getTableName());
 						}
-						else{
+						else
+						{
 							result=memoryManager.insertToMemory(chosenTM.getTableName(), (Record)chosenTM.getValue());
+							scheduler.releaseLock(t.getTID());
 						}
 						break;
 					case DELETE_TABLE:
-						//TODO: delete buffer needed, since we need to store delete state
-						if(!t.getTransactionType()){
-							result=memoryManager.deleteTable(chosenTM.getTableName());
-						}else{
+						scheduler.addTupleLock(Type.D, t.getTID(), null, chosenTM.getTableName(), null);
+						if(t.getTransactionType())
+						{
 							//put into op buffer
 							result = true;
 						}
+						else
+						{
+							result=memoryManager.deleteTable(chosenTM.getTableName());
+							scheduler.releaseLock(t.getTID());
+						}
 						break;
 					case COMMIT:	// need to check commit function in MM
-						if(t.getTransactionType()){
+						if(t.getTransactionType())
+						{
 							result=memoryManager.commitToTransaction(chosenTM.getOPBuffer());
+							scheduler.releaseLock(t.getTID());
 						}
 						else
 						{
@@ -192,8 +227,10 @@ public class CPU
 						}
 						break;
 					case ABORT:
-						if(t.getTransactionType()){
+						if(t.getTransactionType())
+						{
 							chosenTM.Abort();
+							scheduler.releaseLock(t.getTID());
 						}
 						result = true;
 						break;
@@ -204,7 +241,7 @@ public class CPU
 					default:
 						throw new UnsupportedOperationException("Command not supported");
 				}
-
+				
 				dataManagerLog.append(memoryManager.getLog());
 				
 				if(!result)
@@ -214,7 +251,7 @@ public class CPU
 				else
 				{
 					//for afterImageLog
-					if(t.getTransactionType())
+					if(!t.getTransactionType())
 					{
 						afterImageLog = "[T_" + t.getTID() + ", BEGIN]\n" + 
 								afterImageLogging(t) + 
@@ -222,7 +259,7 @@ public class CPU
 					}
 					else if(chosenTM.getCommand() == Command.COMMIT)
 					{
-						for(transaction transaction : chosenTM.getOPBuffer())
+						for(Transaction transaction : chosenTM.getOPBuffer())
 						{
 							afterImageLog += afterImageLogging(transaction);
 						}
@@ -266,6 +303,32 @@ public class CPU
 							break;
 						default:
 							throw new UnsupportedOperationException("Command not supported");
+					}
+				}
+				
+				//check for deadlock
+				int deadLockedTID = scheduler.DeadLockDetectFree();
+				if(deadLockedTID != -1)
+				{
+					boolean assertionCheck = false;
+					for(TransactionManager manager : scriptTransactionManager)
+					{
+						if(manager.getTransaction().getTID() == deadLockedTID)
+						{
+							assertionCheck = true;
+							manager.DeadLockAbort();
+							
+							//write out to after image
+							FileWriter writer = new FileWriter("afterImage.log", true);
+							writer.append("[T_" + t.getTID() + ", DEADLOCK ABORT]\n");
+							writer.flush();
+							writer.close();
+							break;
+						}
+					}
+					if(!assertionCheck)
+					{
+						throw new IllegalStateException("Could not find transaction to abort; deadlock still detected.");
 					}
 				}
 				
