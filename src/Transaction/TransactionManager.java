@@ -31,9 +31,11 @@ public class TransactionManager {
 	private boolean error;
 	private boolean TransactionType;
 	private int TID; 
-	private ArrayList<transaction> OPBuffer;
+	private ArrayList<Transaction> OPBuffer;
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
+	
+	private static int transaction_id = 0;
 	
 	/**
 	 * The constructor.
@@ -61,7 +63,7 @@ public class TransactionManager {
 		this.error = false;
 		this.TransactionType = false;
 		this.TID = -1;
-		this.OPBuffer = new ArrayList<transaction>();
+		this.OPBuffer = new ArrayList<Transaction>();
 		this.tempData = new ArrayList<ArrayList<Record>>();
 		this.tempTableIndex = new ArrayList<String>();
 	}
@@ -126,14 +128,9 @@ public class TransactionManager {
 			} else if(split[0].equals("B")){
 				this.command = Command.BEGIN;
 				this.value = Integer.getInteger(split[1]);
-				if((int)value == 1){
-					TransactionType = true;
-					TID = 1; // when cpu finished we add it here;
-				} else {
-					TransactionType = false;
-					TID = -1;
-				}
-				
+				TransactionType = ((int)this.value) == 1;
+				TID = transaction_id; // when cpu finished we add it here;
+				transaction_id++;
 			}
 		}
 		else
@@ -165,12 +162,12 @@ public class TransactionManager {
 		this.fullString = line;
 	}//end method()
 	
-	public ArrayList<transaction> getOPBuffer(){
-		ArrayList<transaction> temp = (ArrayList<transaction>) OPBuffer.clone();
-		OPBuffer.clear();
-		tempData.clear();
-		tempTableIndex.clear();
-		TID = -1;
+	public ArrayList<Transaction> getOPBuffer(){
+		ArrayList<Transaction> temp = (ArrayList<Transaction>) OPBuffer.clone();
+//		OPBuffer.clear();
+//		tempData.clear();
+//		tempTableIndex.clear();
+//		TID = -1;
 		return temp;
 		
 	}
@@ -234,7 +231,7 @@ public class TransactionManager {
 	}
 	
 	private boolean ifDeletetable(String tableName){
-		for(transaction op : OPBuffer){
+		for(Transaction op : OPBuffer){
 			if( op.getCommand()==Command.DELETE_TABLE&& op.getTableName()==tableName){
 				return true;
 			}
@@ -257,6 +254,14 @@ public class TransactionManager {
 		loadNextLine();
 	}
 	
+	public void commit()
+	{
+		TransactionType = false;
+		TID = -1;
+		OPBuffer.clear();
+		tempData.clear();
+		tempTableIndex.clear();
+	}
 	
 	public String getFullString()
 	{
@@ -314,16 +319,16 @@ public class TransactionManager {
 	{
 		return this.file.getName();
 	}
-	public transaction getTransaction(){
+	public Transaction getTransaction(){
 		
-		transaction temp =  new transaction(command,tableName,value,fullString,lineNumber,TransactionType,TID);
+		Transaction temp =  new Transaction(command,tableName,value,fullString,lineNumber,TransactionType,TID);
 		if(TransactionType){
 			OPBuffer.add(temp);
 		}
 		return temp;
 	}
 	
-	public class transaction{
+	public class Transaction{
 		private Command command;					//The command of the last read line
 		private String tableName;					//The name of the table referenced by the last read line
 		private Object value;						//The value of the last read line.  The type depends on what command is being used
@@ -332,7 +337,7 @@ public class TransactionManager {
 		private int lineNumber;
 		private boolean TransactionType;
 		private int TID; 
-		public transaction(Command command, String tableName, Object value, String fullString, int lineNumber, boolean TransactionType, int TID){
+		public Transaction(Command command, String tableName, Object value, String fullString, int lineNumber, boolean TransactionType, int TID){
 			this.command = command;
 			this.tableName = tableName;
 			this.value = value;
