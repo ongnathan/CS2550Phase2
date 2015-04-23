@@ -82,7 +82,7 @@ public class Scheduler {
 		Set<Integer> DeadVertex = cycleDectect();
 		int DeadVertexTID = -1;
 		if(!DeadVertex.isEmpty()){
-			DeadVertexTID = DeadVertex.iterator().next();
+			DeadVertexTID = (int) DeadVertex.toArray()[0];
 			//get dead TID, then clear the table entry whose wait for field is this TID
 			releaseLock(DeadVertexTID);
 		}
