@@ -18,18 +18,17 @@ public class Scheduler {
 	}
 	
 	/**
-	 *addTupleLock: return value is: if this transaction has to wait for someone or not
-	 *for true is yes, otherwise is not
+	 *addTupleLock: return value is: if the lock is added successfully
 	 */
 	public boolean addTupleLock(Type type, int TID, IDNumber id, String TableName, AreaCode area_code){
 		Lock l = new Lock(type, 0, TID, id, TableName, area_code);
-		return addLock(l);
-	}
-	
-	private boolean addLock(Lock L){
-		L.WaitforT = getLatestWaitfor(L);
-		LockTable.add(L);
-		return !L.WaitforT.isEmpty();
+		l.WaitforT = getLatestWaitfor(l);
+		if(l.WaitforT.isEmpty()){
+			LockTable.add(l);
+			return true;
+		}else{
+			return false;
+		}
 	}
 	
 	public void releaseLock(int TID){
