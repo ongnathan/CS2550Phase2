@@ -19,7 +19,7 @@ import data.Record;
 public class TransactionManager {
 	private final File file;
 	private final BufferedReader fileReader;	//The file reader
-	
+	private boolean blockbit;
 	private Command command;					//The command of the last read line
 	private String tableName;					//The name of the table referenced by the last read line
 	private Object value;						//The value of the last read line.  The type depends on what command is being used
@@ -34,8 +34,6 @@ public class TransactionManager {
 	private ArrayList<Transaction> OPBuffer;
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
-	
-	private boolean blocked;
 	
 	private static int transaction_id = 0;
 	
@@ -68,6 +66,7 @@ public class TransactionManager {
 		this.OPBuffer = new ArrayList<Transaction>();
 		this.tempData = new ArrayList<ArrayList<Record>>();
 		this.tempTableIndex = new ArrayList<String>();
+		this.blockbit = false;
 	}
 	
 	/**
@@ -76,10 +75,8 @@ public class TransactionManager {
 	 */
 	public void loadNextLine() throws IOException
 	{
-		if(this.blocked)
-		{
-			this.blocked = false;
-			return;
+		if(this.blockbit){
+			return ;
 		}
 		this.error = false;
 		if(this.streamIsClosed)
@@ -171,10 +168,6 @@ public class TransactionManager {
 	
 	public ArrayList<Transaction> getOPBuffer(){
 		ArrayList<Transaction> temp = (ArrayList<Transaction>) OPBuffer.clone();
-//		OPBuffer.clear();
-//		tempData.clear();
-//		tempTableIndex.clear();
-//		TID = -1;
 		return temp;
 		
 	}
@@ -252,13 +245,14 @@ public class TransactionManager {
 		OPBuffer.clear();
 		tempData.clear();
 		tempTableIndex.clear();
-		this.blocked = false;
 	}
 	
 	public void DeadLockAbort() throws IOException{
-		while(!this.getCommand().equals(Command.ABORT ) && !this.getCommand().equals(Command.COMMIT)) 
+		this.blockbit = false;
+		while(this.getCommand().equals(Command.ABORT ) || this.getCommand().equals(Command.COMMIT)) 
 			loadNextLine();
 		Abort();
+		loadNextLine();
 	}
 	
 	public void commit()
@@ -268,11 +262,6 @@ public class TransactionManager {
 		OPBuffer.clear();
 		tempData.clear();
 		tempTableIndex.clear();
-	}
-	
-	public void block()
-	{
-		this.blocked = true;
 	}
 	
 	public String getFullString()
@@ -334,10 +323,15 @@ public class TransactionManager {
 	public Transaction getTransaction(){
 		
 		Transaction temp =  new Transaction(command,tableName,value,fullString,lineNumber,TransactionType,TID);
-		if(TransactionType){
-			OPBuffer.add(temp);
-		}
+		
 		return temp;
+	}
+	public boolean addOP() {
+		if(TransactionType){
+			OPBuffer.add(new Transaction(command,tableName,value,fullString,lineNumber,TransactionType,TID));
+			return true;
+		}
+		return false;
 	}
 	
 	public class Transaction{
@@ -409,5 +403,14 @@ public class TransactionManager {
 		public int getTID(){
 			return this.TID;
 		}
+	}
+
+	public void block() {
+		blockbit = true;
+	}
+
+	public void unblock() {
+		blockbit = false;
+		
 	}
 }

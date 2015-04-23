@@ -18,6 +18,8 @@ import data.AreaCode;
 import data.IDNumber;
 import data.Record;
 import disk.Disk;
+//import parser.Parser;
+//import tansactionmanager.TransactionManager;
 
 public class CPU
 {
@@ -28,8 +30,8 @@ public class CPU
 		int numberOfScript = 0;
 		int[] fileEndCheck;
 		int endFileCount = 0;
-		long debugOpCount = 0;
-		final long TIMEOUT = 10;
+		long debugClock = 0;
+		final long timeOutSheld = 10;
 		//argument check
 		if(args.length < 4 || !Arrays.asList(args).contains("X"))
 		{
@@ -126,7 +128,7 @@ public class CPU
 			{
 				try
 				{
-					debugOpCount++;
+					++debugClock;
 					chosenTM.loadNextLine();
 					dataManagerLog.append(chosenTM.getFullString() + "\n");
 				}
@@ -140,14 +142,44 @@ public class CPU
 			if (!chosenTM.streamIsClosed() && fileEndCheck[nextScriptIndex] != 1)
 			{
 				Transaction t = chosenTM.getTransaction();
+				AreaCode areaCode = null;
+				if(debugClock%timeOutSheld==0){
+					//check for deadlock
+					int deadLockedTID = scheduler.DeadLockDetectFree();
+					if(deadLockedTID != -1)
+					{
+						boolean assertionCheck = false;
+						for(TransactionManager manager : scriptTransactionManager)
+						{
+							if(manager.getTransaction().getTID() == deadLockedTID)
+							{
+								assertionCheck = true;
+								manager.DeadLockAbort();
+	
+								//write out to after image
+								FileWriter writer = new FileWriter("afterImage.log", true);
+								writer.append("[T_" + t.getTID() + ", DEADLOCK ABORT]\n");
+								writer.flush();
+								writer.close();
+								break;
+							}
+						}
+						if(!assertionCheck)
+						{
+							throw new IllegalStateException("Could not find transaction to abort; deadlock still detected.");
+						}
+					}
+				}
 				switch (chosenTM.getCommand())
 				{
 					case READ_ID:
-						if(!scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null))
+						if(!scheduler.addTupleLock(Type.R, t.getTID(), (IDNumber)chosenTM.getValue(), chosenTM.getTableName(), null))
 						{
 							chosenTM.block();
 							continue;
 						}
+						chosenTM.unblock();
+						chosenTM.addOP();
 						value = memoryManager.readRecord(chosenTM.getTableName(), (IDNumber)chosenTM.getValue());
 						if(t.getTransactionType() && value == null)
 						{
@@ -160,16 +192,18 @@ public class CPU
 						result = (value != null);
 						break;
 					case READ_AREA_CODE:
-						AreaCode area_code =  (AreaCode) chosenTM.getValue();
-						if(!scheduler.addTupleLock(Type.M, t.getTID(), null, chosenTM.getTableName(), area_code))
+						areaCode =  (AreaCode) chosenTM.getValue();
+						if(!scheduler.addTupleLock(Type.M, t.getTID(), null, chosenTM.getTableName(), areaCode))
 						{
 							chosenTM.block();
 							continue;
 						}
-						Record[] tempRecordList = memoryManager.readAreaCode(area_code,chosenTM.getTableName());
+						chosenTM.unblock();
+						chosenTM.addOP();
+						Record[] tempRecordList = memoryManager.readAreaCode(areaCode,chosenTM.getTableName());
 						if(t.getTransactionType())
 						{
-							ArrayList<Record> transactionRecords = chosenTM.ReadAreaFromTempData( area_code.areaCode, chosenTM.getTableName());
+							ArrayList<Record> transactionRecords = chosenTM.ReadAreaFromTempData( areaCode.areaCode, chosenTM.getTableName());
 							if(tempRecordList != null)
 							{
 								transactionRecords.addAll(Arrays.asList(tempRecordList));
@@ -184,12 +218,14 @@ public class CPU
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
-						AreaCode areaCode =  (AreaCode) chosenTM.getValue();
+						areaCode =  (AreaCode) chosenTM.getValue();
 						if(!scheduler.addTupleLock(Type.G, t.getTID(), null, chosenTM.getTableName(), areaCode))
 						{
 							chosenTM.block();
 							continue;
 						}
+						chosenTM.unblock();
+						chosenTM.addOP();
 						int counter = memoryManager.countAreaCode(areaCode,chosenTM.getTableName());
 						if(t.getTransactionType())
 						{
@@ -208,6 +244,8 @@ public class CPU
 							chosenTM.block();
 							continue;
 						}
+						chosenTM.unblock();
+						chosenTM.addOP();
 						if(t.getTransactionType())
 						{
 							result = chosenTM.writeToTempData(t.getTinRecordFormat(),chosenTM.getTransaction().getTableName());
@@ -224,6 +262,8 @@ public class CPU
 							chosenTM.block();
 							continue;
 						}
+						chosenTM.unblock();
+						chosenTM.addOP();
 						if(t.getTransactionType())
 						{
 							//put into op buffer
@@ -325,52 +365,6 @@ public class CPU
 							throw new UnsupportedOperationException("Command not supported");
 					}
 				}
-				
-				//check for deadlock
-				if(debugOpCount > TIMEOUT)
-				{
-					int deadLockedTID = scheduler.DeadLockDetectFree();
-					if(deadLockedTID != -1)
-					{
-						boolean assertionCheck = false;
-						for(TransactionManager manager : scriptTransactionManager)
-						{
-							if(manager.getTransaction().getTID() == deadLockedTID)
-							{
-								assertionCheck = true;
-								manager.DeadLockAbort();
-								
-								//write out to after image
-								FileWriter writer = new FileWriter("afterImage.log", true);
-								writer.append("[T_" + t.getTID() + ", DEADLOCK ABORT]\n");
-								writer.flush();
-								writer.close();
-								break;
-							}
-						}
-						if(!assertionCheck)
-						{
-							throw new IllegalStateException("Could not find transaction to abort; deadlock still detected.");
-						}
-					}
-					debugOpCount = 0;
-				}
-				
-				do
-				{
-					try
-					{
-						debugOpCount++;
-						chosenTM.loadNextLine();
-//						lineCounter++;
-						dataManagerLog.append(chosenTM.getFullString() + "\n");
-					}
-					catch(IOException e)
-					{
-						System.err.println(e.getMessage());
-						dataManagerLog.append(e.getMessage() + "\n");
-					}
-				} while(chosenTM.isError() && !chosenTM.streamIsClosed());
 			} else {
 				fileEndCheck[nextScriptIndex] = 1;
 				endFileCount++;
