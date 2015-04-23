@@ -2,6 +2,7 @@ package Scheduler;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
+import java.util.IllegalFormatCodePointException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
@@ -24,6 +25,9 @@ public class Scheduler {
 	public boolean addTupleLock(Type type, int TID, IDNumber id, String TableName, AreaCode area_code){
 		Lock l = new Lock(type, 0, TID, id, TableName, area_code);
 		return addLock(l);
+			if(!LockTable.contains(l)){
+				LockTable.add(l);
+			}
 	}
 	
 	private boolean addLock(Lock L){
