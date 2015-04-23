@@ -30,7 +30,6 @@ public class CPU
 		int numberOfScript = 0;
 		int[] fileEndCheck;
 		int endFileCount = 0;
-		int debugCount = 0;
 		//argument check
 		if(args.length < 4 || !Arrays.asList(args).contains("X"))
 		{
@@ -117,7 +116,7 @@ public class CPU
 			} else {
 				nextScriptIndex = ((int)Math.random()*10000)%numberOfScript;
 			}
-			++debugCount;
+			
 			boolean result = false;
 			Object value = "  ";
 			StringBuilder dataManagerLog = new StringBuilder();
@@ -143,11 +142,12 @@ public class CPU
 				switch (chosenTM.getCommand())
 				{
 					case READ_ID:
-						result = false;
-						value = memoryManager.readRecord(chosenTM.getTableName(), (IDNumber)chosenTM.getValue());
-						if(value!=null){
-							scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null);
+						if(!scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null))
+						{
+							chosenTM.block();
+							continue;
 						}
+						value = memoryManager.readRecord(chosenTM.getTableName(), (IDNumber)chosenTM.getValue());
 						if(t.getTransactionType() && value == null)
 						{
 							value = chosenTM.ReadIdFromTempData(((IDNumber)chosenTM.getValue()).value, chosenTM.getTableName());
@@ -159,9 +159,13 @@ public class CPU
 						result = (value != null);
 						break;
 					case READ_AREA_CODE:
+						if(!scheduler.addTupleLock(Type.M, t.getTID(), null, chosenTM.getTableName(), area_code))
+						{
+							chosenTM.block();
+							continue;
+						}
 						AreaCode area_code =  (AreaCode) chosenTM.getValue();
 						Record[] tempRecordList = memoryManager.readAreaCode(area_code,chosenTM.getTableName());
-						scheduler.addTupleLock(Type.M, t.getTID(), null, chosenTM.getTableName(), area_code);
 						if(t.getTransactionType())
 						{
 							ArrayList<Record> transactionRecords = chosenTM.ReadAreaFromTempData( area_code.areaCode, chosenTM.getTableName());
@@ -179,9 +183,13 @@ public class CPU
 						result = (value != null);
 						break;
 					case COUNT_AREA_CODE:
+						if(!scheduler.addTupleLock(Type.G, t.getTID(), null, chosenTM.getTableName(), areaCode))
+						{
+							chosenTM.block();
+							continue;
+						}
 						AreaCode areaCode =  (AreaCode) chosenTM.getValue();
 						int counter = memoryManager.countAreaCode(areaCode,chosenTM.getTableName());
-						scheduler.addTupleLock(Type.G, t.getTID(), null, chosenTM.getTableName(), areaCode);
 						if(t.getTransactionType())
 						{
 							counter += chosenTM.CountFromTempData(areaCode, chosenTM.getTableName());
@@ -194,7 +202,11 @@ public class CPU
 						value = counter;
 						break;
 					case INSERT:
-						scheduler.addTupleLock(Type.I, t.getTID(), ((Record)t.getValue()).id, chosenTM.getTableName(), null);
+						if(!scheduler.addTupleLock(Type.I, t.getTID(), ((Record)t.getValue()).id, chosenTM.getTableName(), null))
+						{
+							chosenTM.block();
+							continue;
+						}
 						if(t.getTransactionType())
 						{
 							result = chosenTM.writeToTempData(t.getTinRecordFormat(),chosenTM.getTransaction().getTableName());
@@ -206,7 +218,11 @@ public class CPU
 						}
 						break;
 					case DELETE_TABLE:
-						scheduler.addTupleLock(Type.D, t.getTID(), null, chosenTM.getTableName(), null);
+						if(!scheduler.addTupleLock(Type.D, t.getTID(), null, chosenTM.getTableName(), null))
+						{
+							chosenTM.block();
+							continue;
+						}
 						if(t.getTransactionType())
 						{
 							//put into op buffer
@@ -335,6 +351,20 @@ public class CPU
 					}
 				}
 				
+				do
+				{
+					try
+					{
+						chosenTM.loadNextLine();
+//						lineCounter++;
+						dataManagerLog.append(chosenTM.getFullString() + "\n");
+					}
+					catch(IOException e)
+					{
+						System.err.println(e.getMessage());
+						dataManagerLog.append(e.getMessage() + "\n");
+					}
+				} while(chosenTM.isError() && !chosenTM.streamIsClosed());
 			} else {
 				fileEndCheck[nextScriptIndex] = 1;
 				endFileCount++;
