@@ -155,7 +155,6 @@ public class CPU
 							{
 								assertionCheck = true;
 								manager.DeadLockAbort();
-	
 								//write out to after image
 								FileWriter writer = new FileWriter("afterImage.log", true);
 								writer.append("[T_" + t.getTID() + ", DEADLOCK ABORT]\n");
