@@ -30,6 +30,7 @@ public class TransactionManager {
 	
 	private boolean error;
 	private boolean TransactionType;
+	private boolean hasBegun;
 	private int TID; 
 	private ArrayList<Transaction> OPBuffer;
 	private ArrayList<ArrayList<Record>> tempData;
@@ -99,6 +100,12 @@ public class TransactionManager {
 
 		this.lineNumber++;
 		
+		if(this.hasBegun && !this.TransactionType &&( !this.command.equals(Command.ABORT)&& !this.command.equals(Command.COMMIT)&& !this.command.equals(Command.BEGIN)))
+		{
+			transaction_id++;
+			this.TID = transaction_id;
+		}
+		
 		String[] split = line.split(" ");
 		if(split.length > 3)
 		{
@@ -133,8 +140,13 @@ public class TransactionManager {
 				this.command = Command.BEGIN;
 				this.value = Integer.parseInt(split[1]);
 				TransactionType = ((int)this.value) == 1;
+				if(TransactionType){
+					transaction_id++;
+				}
 				TID = transaction_id; // when cpu finished we add it here;
 				transaction_id++;
+				this.hasBegun = true;
+
 			}
 		}
 		else
@@ -245,6 +257,7 @@ public class TransactionManager {
 		OPBuffer.clear();
 		tempData.clear();
 		tempTableIndex.clear();
+		this.hasBegun = false;
 	}
 	
 	public void DeadLockAbort() throws IOException{
@@ -341,7 +354,7 @@ public class TransactionManager {
 		
 		private int lineNumber;
 		private boolean TransactionType;
-		private int TID; 
+		private final int TID;
 		public Transaction(Command command, String tableName, Object value, String fullString, int lineNumber, boolean TransactionType, int TID){
 			this.command = command;
 			this.tableName = tableName;
