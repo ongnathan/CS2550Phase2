@@ -2,6 +2,8 @@ package Scheduler;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 
 import data.AreaCode;
@@ -34,15 +36,16 @@ public class Scheduler {
 		while( i >= 0 ){
 			if( LockTable.get(i).TID == TID )
 				LockTable.remove(i);
-			if( LockTable.get(i).WaitforT == TID )
-				LockTable.get(i).WaitforT = -1;
+			if( LockTable.get(i).WaitforT.contains(TID) )
+				LockTable.get(i).WaitforT.remove(TID);
 			--i;
 		}
 		return ;
 	}
 	
-	private int getLatestWaitfor(Lock L){
+	private LinkedList<Integer> getLatestWaitfor(Lock L){
 		int i = LockTable.size();
+		LinkedList<Integer> ret = new LinkedList<Integer>();
 		while( i >= 0 ){
 			if(CompatTable(L.Ttype,LockTable.get(i).Ttype)){
 					--i;
@@ -50,21 +53,23 @@ public class Scheduler {
 			}else{
 					if( L.TableName.equals(LockTable.get(i).TableName) &&  (( L.ID == LockTable.get(i).ID ) || L.AreaCode.equals(LockTable.get(i).AreaCode) ))
 					{
-						return LockTable.get(i).TID;
+						ret.add(LockTable.get(i).TID);
 					}
 					else{
 						--i;
 					}
 			}
 		}
-		return -1;
+		return ret;
 	}
 
 	private Set<Integer> cycleDectect(){
 		Graph WaitforGraph = new Graph();
 		int i = LockTable.size();
 		while( i >= 0 ){
-			WaitforGraph.addEdge(LockTable.get(i).TID, LockTable.get(i).WaitforT);
+			for( int j = 0; j<LockTable.get(i).WaitforT.size();++j){
+				WaitforGraph.addEdge(LockTable.get(i).TID, LockTable.get(i).WaitforT.get(j));
+			}
 			--i;
 		} 
 		return WaitforGraph.checkCycle();
@@ -98,7 +103,7 @@ public class Scheduler {
 		public IDNumber ID;//Record ID
 		public String TableName;
 		public data.AreaCode AreaCode;
-		public int WaitforT;
+		public LinkedList<Integer> WaitforT;
 		
 		public Lock(Type type, int Stamp, int TID, IDNumber id2, String TableName, data.AreaCode area_code){
 			this.Ttype = type;
@@ -107,7 +112,7 @@ public class Scheduler {
 			this.ID = id2;
 			this.TableName = TableName;
 			this.AreaCode = area_code;
-			this.WaitforT = -1;
+			this.WaitforT = null;
 		}
 		
 	}
