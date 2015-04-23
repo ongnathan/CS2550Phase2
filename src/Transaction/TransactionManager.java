@@ -35,6 +35,8 @@ public class TransactionManager {
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	
+	private boolean blocked;
+	
 	private static int transaction_id = 0;
 	
 	/**
@@ -74,6 +76,10 @@ public class TransactionManager {
 	 */
 	public void loadNextLine() throws IOException
 	{
+		if(this.blocked)
+		{
+			this.blocked = false;
+			return;
 		}
 		this.error = false;
 		if(this.streamIsClosed)
@@ -262,6 +268,11 @@ public class TransactionManager {
 		OPBuffer.clear();
 		tempData.clear();
 		tempTableIndex.clear();
+	}
+	
+	public void block()
+	{
+		this.blocked = true;
 	}
 	
 	public String getFullString()
