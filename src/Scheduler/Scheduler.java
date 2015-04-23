@@ -55,9 +55,7 @@ public class Scheduler {
 					{
 						ret.add(LockTable.get(i).TID);
 					}
-					else{
-						--i;
-					}
+					--i;
 			}
 		}
 		return ret;

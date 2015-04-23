@@ -30,6 +30,7 @@ public class CPU
 		int numberOfScript = 0;
 		int[] fileEndCheck;
 		int endFileCount = 0;
+		int debugCount = 0;
 		//argument check
 		if(args.length < 4 || !Arrays.asList(args).contains("X"))
 		{
@@ -116,7 +117,7 @@ public class CPU
 			} else {
 				nextScriptIndex = ((int)Math.random()*10000)%numberOfScript;
 			}
-			
+			++debugCount;
 			boolean result = false;
 			Object value = "  ";
 			StringBuilder dataManagerLog = new StringBuilder();
@@ -334,20 +335,6 @@ public class CPU
 					}
 				}
 				
-				do
-				{
-					try
-					{
-						chosenTM.loadNextLine();
-//						lineCounter++;
-						dataManagerLog.append(chosenTM.getFullString() + "\n");
-					}
-					catch(IOException e)
-					{
-						System.err.println(e.getMessage());
-						dataManagerLog.append(e.getMessage() + "\n");
-					}
-				} while(chosenTM.isError() && !chosenTM.streamIsClosed());
 			} else {
 				fileEndCheck[nextScriptIndex] = 1;
 				endFileCount++;
