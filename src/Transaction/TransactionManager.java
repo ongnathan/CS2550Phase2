@@ -35,6 +35,8 @@ public class TransactionManager {
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	
+	private boolean blocked;
+	
 	private static int transaction_id = 0;
 	
 	/**
@@ -66,6 +68,7 @@ public class TransactionManager {
 		this.OPBuffer = new ArrayList<Transaction>();
 		this.tempData = new ArrayList<ArrayList<Record>>();
 		this.tempTableIndex = new ArrayList<String>();
+		this.blocked = false;
 	}
 	
 	/**
@@ -74,6 +77,11 @@ public class TransactionManager {
 	 */
 	public void loadNextLine() throws IOException
 	{
+		if(this.blocked)
+		{
+			this.blocked = false;
+			return;
+		}
 		this.error = false;
 		if(this.streamIsClosed)
 		{
@@ -112,8 +120,8 @@ public class TransactionManager {
 			}
 		}
 		else if(split.length == 2)
-		{ 
-			if(!split[0].equals("D") && !split[0].equals("B"))
+		{
+			if(!split[0].equals("D") || !split[0].equals("B"))
 			{
 				this.error = true;
 				throw new IOException("File is not in the correct format at line " + this.lineNumber + ".");
@@ -127,7 +135,7 @@ public class TransactionManager {
 				this.value = null;
 			} else if(split[0].equals("B")){
 				this.command = Command.BEGIN;
-				this.value = Integer.parseInt(split[1]);
+				this.value = Integer.getInteger(split[1]);
 				TransactionType = ((int)this.value) == 1;
 				TID = transaction_id; // when cpu finished we add it here;
 				transaction_id++;
@@ -254,6 +262,11 @@ public class TransactionManager {
 		loadNextLine();
 	}
 	
+	public void block()
+	{
+		this.blocked = true;
+	}
+	
 	public void commit()
 	{
 		TransactionType = false;
@@ -347,7 +360,7 @@ public class TransactionManager {
 			this.TID = TID;
 		}
 		public Record getTinRecordFormat(){
-			return new Record((String)this.value.toString());
+			return new Record((String)this.value);
 		}
 		
 		public String getFullString()
