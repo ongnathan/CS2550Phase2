@@ -142,6 +142,7 @@ public class CPU
 			if (!chosenTM.streamIsClosed() && fileEndCheck[nextScriptIndex] != 1)
 			{
 				Transaction t = chosenTM.getTransaction();
+				System.out.println(chosenTM.toString() + ":" + t.getTID());
 				AreaCode areaCode = null;
 				if(debugClock%timeOutSheld==0){
 					//check for deadlock
@@ -312,9 +313,20 @@ public class CPU
 					//for afterImageLog
 					if(!t.getTransactionType())
 					{
-						afterImageLog = "[T_" + t.getTID() + ", BEGIN]\n" + 
-								afterImageLogging(t) + 
-								"[T_" + t.getTID() + ", COMMIT]\n";
+						if(t.getCommand() == Command.INSERT || t.getCommand() == Command.DELETE_TABLE)
+						{
+							afterImageLog = "[T_" + t.getTID() + ",BEGIN]\n" + 
+									afterImageLogging(t) + 
+									"[T_" + t.getTID() + ",COMMIT]\n";
+						}
+						else
+						{
+							if(t.getCommand() == Command.BEGIN ||t.getCommand() == Command.COMMIT ||t.getCommand() == Command.ABORT){
+								
+							} else {
+								afterImageLog = afterImageLogging(t);
+							}
+						}
 					}
 					else if(chosenTM.getCommand() == Command.COMMIT)
 					{

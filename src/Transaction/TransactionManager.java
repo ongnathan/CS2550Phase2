@@ -252,7 +252,6 @@ public class TransactionManager {
 		while( ! (this.getCommand().equals(Command.ABORT ) || this.getCommand().equals(Command.COMMIT)) ) 
 			loadNextLine();
 		Abort();
-		loadNextLine();
 	}
 	
 	public void commit()
