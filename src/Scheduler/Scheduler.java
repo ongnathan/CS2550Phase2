@@ -2,6 +2,7 @@ package Scheduler;
 
 import java.awt.Graphics;
 import java.util.ArrayList;
+import java.util.IllegalFormatCodePointException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
@@ -27,6 +28,9 @@ public class Scheduler {
 			LockTable.add(l);
 			return true;
 		}else{
+			if(!LockTable.contains(l)){
+				LockTable.add(l);
+			}
 			return false;
 		}
 	}

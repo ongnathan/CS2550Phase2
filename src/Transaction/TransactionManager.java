@@ -35,8 +35,6 @@ public class TransactionManager {
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	
-	private boolean blocked;
-	
 	private static int transaction_id = 0;
 	
 	/**
@@ -68,15 +66,7 @@ public class TransactionManager {
 		this.OPBuffer = new ArrayList<Transaction>();
 		this.tempData = new ArrayList<ArrayList<Record>>();
 		this.tempTableIndex = new ArrayList<String>();
-<<<<<<< Updated upstream
-		this.blocked = false;
-=======
-<<<<<<< HEAD
 		this.blockbit = false;
-=======
-		this.blocked = false;
->>>>>>> origin/master
->>>>>>> Stashed changes
 	}
 	
 	/**
@@ -85,21 +75,8 @@ public class TransactionManager {
 	 */
 	public void loadNextLine() throws IOException
 	{
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 		if(this.blockbit){
 			return ;
-=======
->>>>>>> Stashed changes
-		if(this.blocked)
-		{
-			this.blocked = false;
-			return;
-<<<<<<< Updated upstream
-=======
->>>>>>> origin/master
->>>>>>> Stashed changes
 		}
 		this.error = false;
 		if(this.streamIsClosed)
@@ -139,8 +116,8 @@ public class TransactionManager {
 			}
 		}
 		else if(split.length == 2)
-		{
-			if(!split[0].equals("D") || !split[0].equals("B"))
+		{ 
+			if(!split[0].equals("D") && !split[0].equals("B"))
 			{
 				this.error = true;
 				throw new IOException("File is not in the correct format at line " + this.lineNumber + ".");
@@ -154,7 +131,7 @@ public class TransactionManager {
 				this.value = null;
 			} else if(split[0].equals("B")){
 				this.command = Command.BEGIN;
-				this.value = Integer.getInteger(split[1]);
+				this.value = Integer.parseInt(split[1]);
 				TransactionType = ((int)this.value) == 1;
 				TID = transaction_id; // when cpu finished we add it here;
 				transaction_id++;
@@ -271,15 +248,11 @@ public class TransactionManager {
 	}
 	
 	public void DeadLockAbort() throws IOException{
-		loadNextLine();
-		while(this.getCommand()!=Command.ABORT || this.getCommand()!=Command.COMMIT) loadNextLine();
+		this.blockbit = false;
+		while(this.getCommand().equals(Command.ABORT ) || this.getCommand().equals(Command.COMMIT)) 
+			loadNextLine();
 		Abort();
 		loadNextLine();
-	}
-	
-	public void block()
-	{
-		this.blocked = true;
 	}
 	
 	public void commit()
@@ -380,7 +353,7 @@ public class TransactionManager {
 			this.TID = TID;
 		}
 		public Record getTinRecordFormat(){
-			return new Record((String)this.value);
+			return new Record((String)this.value.toString());
 		}
 		
 		public String getFullString()
