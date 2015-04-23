@@ -51,7 +51,7 @@ public class Scheduler {
 					--i;
 					continue;
 			}else{
-					if( L.TableName.equals(LockTable.get(i).TableName) &&  (( L.ID == LockTable.get(i).ID ) || L.AreaCode.equals(LockTable.get(i).AreaCode) ))
+					if( L.TableName.equals(LockTable.get(i).TableName) &&  ( ( (L.ID!=null)  &&   L.ID.equals(LockTable.get(i).ID)  ) || (L.AreaCode!=null) &&  L.AreaCode.equals(LockTable.get(i).AreaCode)) )
 					{
 						ret.add(LockTable.get(i).TID);
 					}

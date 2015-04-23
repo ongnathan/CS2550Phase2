@@ -144,7 +144,9 @@ public class CPU
 					case READ_ID:
 						result = false;
 						value = memoryManager.readRecord(chosenTM.getTableName(), (IDNumber)chosenTM.getValue());
-						scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null);
+						if(value!=null){
+							scheduler.addTupleLock(Type.R, t.getTID(), ((Record)value).id, chosenTM.getTableName(), null);
+						}
 						if(t.getTransactionType() && value == null)
 						{
 							value = chosenTM.ReadIdFromTempData(((IDNumber)chosenTM.getValue()).value, chosenTM.getTableName());

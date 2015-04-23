@@ -7,7 +7,7 @@ import parser.Command;
 import disk.*;
 import data.*;
 import MainMemory.*;
-import Transaction.TransactionManager.transaction;
+import Transaction.TransactionManager.Transaction;
 import disk.DiskOperation;
 
 public class MemoryManager {
@@ -454,9 +454,9 @@ public class MemoryManager {
 		return this.memory.getPreImage();
 	}
 
-	public boolean commitToTransaction(ArrayList<transaction> opBuffer) {
+	public boolean commitToTransaction(ArrayList<Transaction> opBuffer) {
 		//if commit, then we write insert things into disk
-		for(transaction op : opBuffer)
+		for(Transaction op : opBuffer)
 		{
 			switch(op.getCommand())
 			{

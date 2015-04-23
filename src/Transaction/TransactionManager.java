@@ -112,8 +112,8 @@ public class TransactionManager {
 			}
 		}
 		else if(split.length == 2)
-		{
-			if(!split[0].equals("D") || !split[0].equals("B"))
+		{ 
+			if(!split[0].equals("D") && !split[0].equals("B"))
 			{
 				this.error = true;
 				throw new IOException("File is not in the correct format at line " + this.lineNumber + ".");
@@ -127,7 +127,7 @@ public class TransactionManager {
 				this.value = null;
 			} else if(split[0].equals("B")){
 				this.command = Command.BEGIN;
-				this.value = Integer.getInteger(split[1]);
+				this.value = Integer.parseInt(split[1]);
 				TransactionType = ((int)this.value) == 1;
 				TID = transaction_id; // when cpu finished we add it here;
 				transaction_id++;
@@ -347,7 +347,7 @@ public class TransactionManager {
 			this.TID = TID;
 		}
 		public Record getTinRecordFormat(){
-			return new Record((String)this.value);
+			return new Record((String)this.value.toString());
 		}
 		
 		public String getFullString()
