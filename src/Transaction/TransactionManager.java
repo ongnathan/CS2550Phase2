@@ -250,11 +250,9 @@ public class TransactionManager {
 	}
 	
 	public void DeadLockAbort() throws IOException{
-		this.blockbit = false;
-		while(this.getCommand().equals(Command.ABORT ) || this.getCommand().equals(Command.COMMIT)) 
+		while(!this.getCommand().equals(Command.ABORT ) && !this.getCommand().equals(Command.COMMIT)) 
 			loadNextLine();
 		Abort();
-		loadNextLine();
 	}
 	
 	public void commit()
