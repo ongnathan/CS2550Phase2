@@ -36,7 +36,7 @@ public class TransactionManager {
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	
-	private static int transaction_id = 0;
+	 static int transaction_id = 0;
 	
 	/**
 	 * The constructor.
@@ -100,12 +100,6 @@ public class TransactionManager {
 
 		this.lineNumber++;
 		
-		if(this.hasBegun && !this.TransactionType &&( !this.command.equals(Command.ABORT)&& !this.command.equals(Command.COMMIT)&& !this.command.equals(Command.BEGIN)))
-		{
-			transaction_id++;
-			this.TID = transaction_id;
-		}
-		
 		String[] split = line.split(" ");
 		if(split.length > 3)
 		{
@@ -128,10 +122,6 @@ public class TransactionManager {
 			{
 				this.error = true;
 				throw new IOException("File is not in the correct format at line " + this.lineNumber + ".");
-//				this.loadNextLine();
-//				this.error = "Malformed command at line " + this.lineNumber + "of the script.\n"
-//						+ "Skipping that line.";
-//				return;
 			} else if(split[0].equals("D")){
 				this.command = Command.DELETE_TABLE;
 				this.tableName = split[1];
@@ -140,13 +130,9 @@ public class TransactionManager {
 				this.command = Command.BEGIN;
 				this.value = Integer.parseInt(split[1]);
 				TransactionType = ((int)this.value) == 1;
-				if(TransactionType){
-					transaction_id++;
-				}
-				TID = transaction_id; // when cpu finished we add it here;
+				TID = transaction_id;
 				transaction_id++;
 				this.hasBegun = true;
-
 			}
 		}
 		else
@@ -176,6 +162,11 @@ public class TransactionManager {
 			this.tableName = split[1];
 		}//end else
 		this.fullString = line;
+		if(!this.TransactionType &&( !this.command.equals(Command.ABORT)&& !this.command.equals(Command.COMMIT)&& !this.command.equals(Command.BEGIN)))
+		{
+			this.TID = transaction_id;
+			transaction_id++;
+		}
 	}//end method()
 	
 	public ArrayList<Transaction> getOPBuffer(){

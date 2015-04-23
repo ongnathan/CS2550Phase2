@@ -330,11 +330,16 @@ public class CPU
 					}
 					else if(chosenTM.getCommand() == Command.COMMIT)
 					{
+						afterImageLog = "[T_" + t.getTID() + ",BEGIN]\n";
 						for(Transaction transaction : chosenTM.getOPBuffer())
 						{
 							afterImageLog += afterImageLogging(transaction);
 						}
+						afterImageLog = afterImageLog+ 
+								"[T_" + t.getTID() + ",COMMIT]\n";
+						chosenTM.commit();
 					}
+					
 					
 					if(!afterImageLog.isEmpty())
 					{
