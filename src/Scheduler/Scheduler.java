@@ -17,20 +17,21 @@ public class Scheduler {
 		timestamp = 0;
 	}
 	
-	//use
-	public void addTupleLock(Type type, int TID, IDNumber id, String TableName, AreaCode area_code){
+	/**
+	 *addTupleLock: return value is: if this transaction has to wait for someone or not
+	 *for true is yes, otherwise is not
+	 */
+	public boolean addTupleLock(Type type, int TID, IDNumber id, String TableName, AreaCode area_code){
 		Lock l = new Lock(type, 0, TID, id, TableName, area_code);
-		addLock(l);
-		return ;
+		return addLock(l);
 	}
 	
-	private void addLock(Lock L){
+	private boolean addLock(Lock L){
 		L.WaitforT = getLatestWaitfor(L);
 		LockTable.add(L);
-		return ;
+		return !L.WaitforT.isEmpty();
 	}
 	
-	//use
 	public void releaseLock(int TID){
 		int i = LockTable.size()-1;
 		while( i >= 0 ){
