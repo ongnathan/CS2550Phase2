@@ -32,11 +32,11 @@ public class Scheduler {
 	
 	//use
 	public void releaseLock(int TID){
-		int i = LockTable.size();
+		int i = LockTable.size()-1;
 		while( i >= 0 ){
-			if( LockTable.get(i).TID == TID )
+			if( LockTable.get(i).TID == TID ){
 				LockTable.remove(i);
-			if( LockTable.get(i).WaitforT.contains(TID) )
+			} else if( LockTable.get(i).WaitforT.contains(TID) )
 				LockTable.get(i).WaitforT.remove(TID);
 			--i;
 		}
@@ -44,7 +44,7 @@ public class Scheduler {
 	}
 	
 	private LinkedList<Integer> getLatestWaitfor(Lock L){
-		int i = LockTable.size();
+		int i = LockTable.size()-1;
 		LinkedList<Integer> ret = new LinkedList<Integer>();
 		while( i >= 0 ){
 			if(CompatTable(L.Ttype,LockTable.get(i).Ttype)){
@@ -65,7 +65,7 @@ public class Scheduler {
 
 	private Set<Integer> cycleDectect(){
 		Graph WaitforGraph = new Graph();
-		int i = LockTable.size();
+		int i = LockTable.size()-1;
 		while( i >= 0 ){
 			for( int j = 0; j<LockTable.get(i).WaitforT.size();++j){
 				WaitforGraph.addEdge(LockTable.get(i).TID, LockTable.get(i).WaitforT.get(j));
