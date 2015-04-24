@@ -1,4 +1,4 @@
-package Transaction;
+package scheduler;
 
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -6,9 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.security.PublicKey;
 import java.util.ArrayList;
-import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
 
 import parser.Command;
 import data.AreaCode;
@@ -30,13 +28,11 @@ public class TransactionManager {
 	
 	private boolean error;
 	private boolean TransactionType;
-	private boolean hasBegun;
 	private int TID; 
 	private ArrayList<Transaction> OPBuffer;
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
 	public long startTimestamp;
-	private long endTimestamp;
 	
 	 static int transaction_id = 0;
 	
@@ -135,7 +131,6 @@ public class TransactionManager {
 				TID = transaction_id;
 				transaction_id++;
 				startTimestamp = System.currentTimeMillis();
-				this.hasBegun = true;
 			}
 		}
 		else
@@ -174,6 +169,7 @@ public class TransactionManager {
 	}//end method()
 	
 	public ArrayList<Transaction> getOPBuffer(){
+		@SuppressWarnings("unchecked")
 		ArrayList<Transaction> temp = (ArrayList<Transaction>) OPBuffer.clone();
 		return temp;
 		
@@ -252,7 +248,6 @@ public class TransactionManager {
 		OPBuffer.clear();
 		tempData.clear();
 		tempTableIndex.clear();
-		this.hasBegun = false;
 	}
 	
 	public void DeadLockAbort() throws IOException{

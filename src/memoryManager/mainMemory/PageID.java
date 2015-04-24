@@ -1,4 +1,4 @@
-package MainMemory;
+package memoryManager.mainMemory;
 
 public class PageID {
 	

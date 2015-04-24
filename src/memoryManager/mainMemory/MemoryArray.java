@@ -1,4 +1,4 @@
-package MainMemory;
+package memoryManager.mainMemory;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -51,6 +51,7 @@ public class MemoryArray
 	
 	public SlottedPage<? extends Attribute>[] forceEvict(Integer[] indexes)
 	{
+		@SuppressWarnings("unchecked")
 		SlottedPage<? extends Attribute>[] pagesToReturn = (SlottedPage<? extends Attribute>[])new SlottedPage[indexes.length];
 		for(int i = 0; i < indexes.length; i++)
 		{
