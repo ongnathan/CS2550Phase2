@@ -35,6 +35,8 @@ public class TransactionManager {
 	private ArrayList<Transaction> OPBuffer;
 	private ArrayList<ArrayList<Record>> tempData;
 	private ArrayList<String> tempTableIndex;//works to find the index of the table in the tempdata
+	public long startTimestamp;
+	private long endTimestamp;
 	
 	 static int transaction_id = 0;
 	
@@ -132,6 +134,7 @@ public class TransactionManager {
 				TransactionType = ((int)this.value) == 1;
 				TID = transaction_id;
 				transaction_id++;
+				startTimestamp = System.currentTimeMillis();
 				this.hasBegun = true;
 			}
 		}
@@ -166,6 +169,7 @@ public class TransactionManager {
 		{
 			this.TID = transaction_id;
 			transaction_id++;
+			startTimestamp = System.currentTimeMillis();
 		}
 	}//end method()
 	

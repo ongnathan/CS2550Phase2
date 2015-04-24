@@ -461,8 +461,11 @@ public class MemoryManager {
 			switch(op.getCommand())
 			{
 				case INSERT:
-					insertToMemory(op.getTableName(), (Record)op.getValue());
-					break;
+					if(insertToMemory(op.getTableName(), (Record)op.getValue())){
+						break;
+					} else {
+						return false;
+					}
 				case DELETE_TABLE:
 					deleteTable(op.getTableName());
 					break;
